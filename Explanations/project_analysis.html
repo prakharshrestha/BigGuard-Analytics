@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @media print {
+      body { background: white !important; color: black !important; }
+      .page-break { page-break-before: always; }
+      .no-print { display: none !important; }
+    }
+    .diagram-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 16px 0;
+    }
+    .flow-node {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .flow-arrow {
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted-foreground);
+      font-size: 22px;
+      margin: 0 6px;
+    }
+    .flow-arrow-down {
+      display: flex;
+      justify-content: center;
+      color: var(--muted-foreground);
+      font-size: 22px;
+      margin: 4px 0;
+    }
+    .section-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    table.analysis-table { width: 100%; border-collapse: collapse; }
+    table.analysis-table th, table.analysis-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    table.analysis-table th {
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted-foreground);
+    }
+    .sql-block {
+      background: var(--content, var(--card));
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .toc-link { text-decoration: none; color: var(--primary); }
+    .toc-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased" style="max-width: 960px; margin: 0 auto; padding: 32px 24px;">
+
+  <!-- ═══════════════════════════════════════════════════ HEADER ═══════════════════════════════════════════════════ -->
+  <div class="text-center" style="margin-bottom: 48px;">
+    <div style="margin-bottom: 12px;">
+      <span class="section-badge" style="background: rgba(59,130,246,0.15); color: rgb(59,130,246);">BIG DATA ANALYTICS</span>
+    </div>
+    <h1 class="text-3xl font-bold" style="margin-bottom: 8px;">UNSW-NB15 Network Traffic Analysis</h1>
+    <p class="text-[var(--muted-foreground)] text-base">Complete Project Documentation &amp; Architecture Guide</p>
+    <p class="text-[var(--muted-foreground)] text-sm" style="margin-top: 4px;">Repository: <code>josephArinaitwe/unsw-network-analysis</code></p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ TABLE OF CONTENTS ═══════════════════════════════════════════════════ -->
+  <div class="diagram-box" style="margin-bottom: 40px;">
+    <h2 class="font-bold text-lg" style="margin-bottom: 12px;">📑 Table of Contents</h2>
+    <ol class="space-y-1" style="padding-left: 20px; font-size: 14px;">
+      <li><a href="#overview" class="toc-link">1. Project Overview</a></li>
+      <li><a href="#dataset" class="toc-link">2. The UNSW-NB15 Dataset</a></li>
+      <li><a href="#architecture" class="toc-link">3. System Architecture</a></li>
+      <li><a href="#dataflow" class="toc-link">4. Data Pipeline &amp; Flow Diagram</a></li>
+      <li><a href="#components" class="toc-link">5. Component Breakdown</a></li>
+      <li><a href="#queries" class="toc-link">6. Hive Query Deep Dive</a></li>
+      <li><a href="#schema" class="toc-link">7. Data Schema &amp; Table Design</a></li>
+      <li><a href="#environment" class="toc-link">8. Computing Environment</a></li>
+      <li><a href="#howtorun" class="toc-link">9. How to Run the Project</a></li>
+      <li><a href="#readiness" class="toc-link">10. Readiness Assessment — Is Everything There?</a></li>
+      <li><a href="#gaps" class="toc-link">11. Missing Components &amp; Gaps</a></li>
+    </ol>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 1. OVERVIEW ═══════════════════════════════════════════════════ -->
+  <div id="overview" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">1.</span> Project Overview
+    </h2>
+    <div class="diagram-box">
+      <p style="font-size: 14px; line-height: 1.7;">
+        This project performs <strong>Big Data Analytics on network intrusion detection data</strong> using the
+        <strong>UNSW-NB15 dataset</strong> — a well-known cybersecurity benchmark created by the University of New South Wales.
+        The analysis leverages the <strong>Apache Hadoop ecosystem</strong>, specifically <strong>Apache Hive</strong> running
+        on <strong>YARN / MapReduce</strong>, to query millions of network flow records and uncover patterns in attack traffic.
+      </p>
+      <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <div style="text-align: center; padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 28px; font-weight: 800; color: rgb(59,130,246);">2.5M+</div>
+          <div style="font-size: 12px; color: var(--muted-foreground);">Network Flow Records</div>
+        </div>
+        <div style="text-align: center; padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 28px; font-weight: 800; color: rgb(234,88,12);">9+</div>
+          <div style="font-size: 12px; color: var(--muted-foreground);">Attack Categories</div>
+        </div>
+        <div style="text-align: center; padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 28px; font-weight: 800; color: rgb(22,163,74);">49</div>
+          <div style="font-size: 12px; color: var(--muted-foreground);">Feature Columns</div>
+        </div>
+      </div>
+      <p style="font-size: 14px; line-height: 1.7; margin-top: 16px;">
+        <strong>Goal:</strong> Analyze destination addresses targeted by attacks, network flow characteristics
+        (duration, bytes), temporal attack patterns (hourly), and protocol/service vulnerabilities using
+        distributed SQL queries in Apache Hive.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 2. DATASET ═══════════════════════════════════════════════════ -->
+  <div id="dataset" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">2.</span> The UNSW-NB15 Dataset
+    </h2>
+    <div class="diagram-box">
+      <p style="font-size: 14px; line-height: 1.7; margin-bottom: 16px;">
+        The UNSW-NB15 dataset was generated by the <strong>Cyber Range Lab of the Australian Centre for Cyber Security (ACCS)</strong>.
+        It contains a hybrid of real modern normal activities and synthetic contemporary attack behaviours,
+        captured using the IXIA PerfectStorm tool.
+      </p>
+
+      <h3 class="font-semibold text-base" style="margin-bottom: 10px;">Attack Categories in the Dataset</h3>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+        <span class="status-pill" style="background: rgba(239,68,68,0.12); color: rgb(239,68,68);">Fuzzers</span>
+        <span class="status-pill" style="background: rgba(234,88,12,0.12); color: rgb(234,88,12);">Analysis</span>
+        <span class="status-pill" style="background: rgba(202,138,4,0.12); color: rgb(202,138,4);">Backdoor</span>
+        <span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74);">DoS</span>
+        <span class="status-pill" style="background: rgba(59,130,246,0.12); color: rgb(59,130,246);">Exploits</span>
+        <span class="status-pill" style="background: rgba(147,51,234,0.12); color: rgb(147,51,234);">Generic</span>
+        <span class="status-pill" style="background: rgba(236,72,153,0.12); color: rgb(236,72,153);">Reconnaissance</span>
+        <span class="status-pill" style="background: rgba(99,102,241,0.12); color: rgb(99,102,241);">Shellcode</span>
+        <span class="status-pill" style="background: rgba(107,114,128,0.12); color: rgb(107,114,128);">Worms</span>
+      </div>
+
+      <h3 class="font-semibold text-base" style="margin-bottom: 10px;">Key Columns Used by This Project</h3>
+      <table class="analysis-table">
+        <thead><tr>
+          <th>Column</th><th>Type</th><th>Description</th>
+        </tr></thead>
+        <tbody>
+          <tr><td><code>dstip</code></td><td>STRING</td><td>Destination IP address</td></tr>
+          <tr><td><code>label</code></td><td>INT</td><td>0 = Normal, 1 = Attack</td></tr>
+          <tr><td><code>attack_cat</code></td><td>STRING</td><td>Attack category name</td></tr>
+          <tr><td><code>dur</code></td><td>DOUBLE</td><td>Flow duration in seconds</td></tr>
+          <tr><td><code>sbytes</code></td><td>BIGINT</td><td>Source-to-destination bytes</td></tr>
+          <tr><td><code>dbytes</code></td><td>BIGINT</td><td>Destination-to-source bytes</td></tr>
+          <tr><td><code>stime</code></td><td>BIGINT</td><td>Start time (Unix epoch seconds)</td></tr>
+          <tr><td><code>proto</code></td><td>STRING</td><td>Network protocol (TCP, UDP, etc.)</td></tr>
+          <tr><td><code>service</code></td><td>STRING</td><td>Application service (HTTP, DNS, etc.)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 3. ARCHITECTURE ═══════════════════════════════════════════════════ -->
+  <div id="architecture" class="page-break" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">3.</span> System Architecture
+    </h2>
+    <div class="diagram-box">
+      <p style="font-size: 13px; color: var(--muted-foreground); margin-bottom: 16px;">High-level architecture showing how the Hadoop ecosystem components interact.</p>
+
+      <!-- Architecture Diagram -->
+      <div style="position: relative; padding: 20px;">
+        <!-- Top Layer: Data Source -->
+        <div style="display: flex; justify-content: center; margin-bottom: 8px;">
+          <div class="flow-node" style="background: rgba(234,88,12,0.12); color: rgb(234,88,12); border: 2px solid rgba(234,88,12,0.3); min-width: 280px;">
+            📄 UNSW-NB15 CSV Dataset<br><span style="font-size:11px; font-weight:400;">(~2.5M records, 49 features)</span>
+          </div>
+        </div>
+        <div class="flow-arrow-down">▼</div>
+
+        <!-- HDFS Layer -->
+        <div style="display: flex; justify-content: center; margin-bottom: 8px;">
+          <div class="flow-node" style="background: rgba(59,130,246,0.12); color: rgb(59,130,246); border: 2px solid rgba(59,130,246,0.3); min-width: 280px;">
+            💾 HDFS (Hadoop 3.2.0)<br><span style="font-size:11px; font-weight:400;">Distributed File Storage (~51 GB)</span>
+          </div>
+        </div>
+        <div class="flow-arrow-down">▼</div>
+
+        <!-- Hive + YARN Layer -->
+        <div style="display: flex; justify-content: center; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
+          <div class="flow-node" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74); border: 2px solid rgba(22,163,74,0.3); min-width: 200px;">
+            🐝 Apache Hive 3.1.3<br><span style="font-size:11px; font-weight:400;">SQL-on-Hadoop Engine</span>
+          </div>
+          <div class="flow-node" style="background: rgba(147,51,234,0.12); color: rgb(147,51,234); border: 2px solid rgba(147,51,234,0.3); min-width: 200px;">
+            🧶 YARN (MapReduce)<br><span style="font-size:11px; font-weight:400;">Resource Manager + Execution</span>
+          </div>
+        </div>
+        <div class="flow-arrow-down">▼</div>
+
+        <!-- Query Layer -->
+        <div style="display: flex; justify-content: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap;">
+          <div class="flow-node" style="background: rgba(239,68,68,0.1); color: rgb(239,68,68); border: 1px solid rgba(239,68,68,0.25); font-size: 11px; min-width: 100px;">🎯 Destination<br>Analysis</div>
+          <div class="flow-node" style="background: rgba(202,138,4,0.1); color: rgb(202,138,4); border: 1px solid rgba(202,138,4,0.25); font-size: 11px; min-width: 100px;">📊 Flow<br>Characteristics</div>
+          <div class="flow-node" style="background: rgba(59,130,246,0.1); color: rgb(59,130,246); border: 1px solid rgba(59,130,246,0.25); font-size: 11px; min-width: 100px;">⏰ Hourly<br>Activity</div>
+          <div class="flow-node" style="background: rgba(147,51,234,0.1); color: rgb(147,51,234); border: 1px solid rgba(147,51,234,0.25); font-size: 11px; min-width: 100px;">🔌 Protocol &amp;<br>Service</div>
+        </div>
+        <div class="flow-arrow-down">▼</div>
+
+        <!-- Output -->
+        <div style="display: flex; justify-content: center;">
+          <div class="flow-node" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74); border: 2px dashed rgba(22,163,74,0.4); min-width: 280px;">
+            📋 Analysis Results<br><span style="font-size:11px; font-weight:400;">Tabular Output (Console / Export)</span>
+          </div>
+        </div>
+
+        <!-- Future Spark -->
+        <div style="margin-top: 20px; display: flex; justify-content: center;">
+          <div class="flow-node" style="background: rgba(107,114,128,0.08); color: var(--muted-foreground); border: 2px dashed rgba(107,114,128,0.3); min-width: 280px;">
+            ⚡ Apache Spark 3.5.9<br><span style="font-size:11px; font-weight:400;">🚧 Planned — Not Yet Implemented</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 4. DATA PIPELINE ═══════════════════════════════════════════════════ -->
+  <div id="dataflow" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">4.</span> Data Pipeline &amp; Flow Diagram
+    </h2>
+    <div class="diagram-box">
+      <p style="font-size: 13px; color: var(--muted-foreground); margin-bottom: 20px;">
+        End-to-end data flow from raw dataset download to analysis output.
+      </p>
+
+      <!-- Pipeline Steps -->
+      <div style="display: grid; grid-template-columns: 1fr; gap: 0;">
+        <!-- Step 1 -->
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px 0;">
+          <div style="min-width: 44px; height: 44px; border-radius: 50%; background: rgba(59,130,246,0.15); color: rgb(59,130,246); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">1</div>
+          <div>
+            <h4 class="font-bold text-sm" style="margin-bottom: 4px;">Download Raw Dataset</h4>
+            <p style="font-size: 13px; color: var(--muted-foreground);">
+              Download <code>UNSW-NB15.csv</code> from the Dropbox link provided in the README.
+              Also download <code>UNSW-NB15_features.csv</code> for column definitions.
+            </p>
+          </div>
+        </div>
+        <div style="margin-left: 22px; height: 24px; border-left: 2px dashed var(--border);"></div>
+
+        <!-- Step 2 -->
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px 0;">
+          <div style="min-width: 44px; height: 44px; border-radius: 50%; background: rgba(234,88,12,0.15); color: rgb(234,88,12); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">2</div>
+          <div>
+            <h4 class="font-bold text-sm" style="margin-bottom: 4px;">Prepare Dataset → <code>UNSW-NB15_prepared.csv</code></h4>
+            <p style="font-size: 13px; color: var(--muted-foreground);">
+              ⚠️ <strong>NOT IN REPO</strong> — The preparation script that cleans/transforms the raw CSV into
+              <code>UNSW-NB15_prepared.csv</code> is not included. Some rows are excluded (tracked in <code>excluded_rows.jsonl</code>, also not in Git).
+            </p>
+          </div>
+        </div>
+        <div style="margin-left: 22px; height: 24px; border-left: 2px dashed var(--border);"></div>
+
+        <!-- Step 3 -->
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px 0;">
+          <div style="min-width: 44px; height: 44px; border-radius: 50%; background: rgba(147,51,234,0.15); color: rgb(147,51,234); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">3</div>
+          <div>
+            <h4 class="font-bold text-sm" style="margin-bottom: 4px;">Upload to HDFS</h4>
+            <p style="font-size: 13px; color: var(--muted-foreground);">
+              Upload the prepared CSV to Hadoop's HDFS using <code>hdfs dfs -put</code>. Stored in distributed filesystem
+              across datanodes.
+            </p>
+          </div>
+        </div>
+        <div style="margin-left: 22px; height: 24px; border-left: 2px dashed var(--border);"></div>
+
+        <!-- Step 4 -->
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px 0;">
+          <div style="min-width: 44px; height: 44px; border-radius: 50%; background: rgba(22,163,74,0.15); color: rgb(22,163,74); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">4</div>
+          <div>
+            <h4 class="font-bold text-sm" style="margin-bottom: 4px;">Create Hive Table — <code>network_flows_analysis</code></h4>
+            <p style="font-size: 13px; color: var(--muted-foreground);">
+              ⚠️ <strong>TABLE DDL EMPTY</strong> — <code>hive_table_definitions.sql</code> is an empty file.
+              You need to write a <code>CREATE EXTERNAL TABLE</code> statement mapping the CSV columns.
+            </p>
+          </div>
+        </div>
+        <div style="margin-left: 22px; height: 24px; border-left: 2px dashed var(--border);"></div>
+
+        <!-- Step 5 -->
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px 0;">
+          <div style="min-width: 44px; height: 44px; border-radius: 50%; background: rgba(239,68,68,0.15); color: rgb(239,68,68); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">5</div>
+          <div>
+            <h4 class="font-bold text-sm" style="margin-bottom: 4px;">Run 4 Analysis Queries via Hive CLI</h4>
+            <p style="font-size: 13px; color: var(--muted-foreground);">
+              Execute each SQL file independently against the <code>network_flows_analysis</code> table.
+              Hive translates SQL → MapReduce jobs → YARN executes → results returned.
+            </p>
+          </div>
+        </div>
+        <div style="margin-left: 22px; height: 24px; border-left: 2px dashed var(--border);"></div>
+
+        <!-- Step 6 -->
+        <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px 0;">
+          <div style="min-width: 44px; height: 44px; border-radius: 50%; background: rgba(99,102,241,0.15); color: rgb(99,102,241); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">6</div>
+          <div>
+            <h4 class="font-bold text-sm" style="margin-bottom: 4px;">Collect &amp; Interpret Results</h4>
+            <p style="font-size: 13px; color: var(--muted-foreground);">
+              Results are printed to the Hive console. No automated export/visualization is included in the project.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 5. COMPONENTS ═══════════════════════════════════════════════════ -->
+  <div id="components" class="page-break" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">5.</span> Component Breakdown
+    </h2>
+    <div class="diagram-box">
+      <h3 class="font-semibold text-base" style="margin-bottom: 16px;">Project File Map</h3>
+
+      <div style="font-family: 'Courier New', monospace; font-size: 13px; line-height: 2; padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+        <div>📁 <strong>unsw-network-analysis/</strong></div>
+        <div style="padding-left: 24px;">📄 <span style="color: var(--muted-foreground);">README.md</span> <span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74); font-size: 10px;">PRESENT</span> — Project documentation</div>
+        <div style="padding-left: 24px;">📄 <span style="color: var(--muted-foreground);">.gitignore</span> <span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74); font-size: 10px;">PRESENT</span> — Excludes datasets &amp; artifacts</div>
+        <div style="padding-left: 24px;">📁 <strong>apache_hive_approach/</strong></div>
+        <div style="padding-left: 48px;">📄 <span style="color: var(--muted-foreground);">hive_table_definitions.sql</span> <span class="status-pill" style="background: rgba(239,68,68,0.12); color: rgb(239,68,68); font-size: 10px;">EMPTY</span></div>
+        <div style="padding-left: 48px;">📄 <span style="color: var(--muted-foreground);">destination_address_analysis.sql</span> <span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74); font-size: 10px;">38 lines</span></div>
+        <div style="padding-left: 48px;">📄 <span style="color: var(--muted-foreground);">flow_characteristics.sql</span> <span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74); font-size: 10px;">34 lines</span></div>
+        <div style="padding-left: 48px;">📄 <span style="color: var(--muted-foreground);">hourly_activity_query.sql</span> <span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74); font-size: 10px;">33 lines</span></div>
+        <div style="padding-left: 48px;">📄 <span style="color: var(--muted-foreground);">protocol_and_service_query.sql</span> <span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74); font-size: 10px;">25 lines</span></div>
+        <div style="padding-left: 24px;">📁 <span style="color: var(--muted-foreground);">apache_spark_approach/</span> <span class="status-pill" style="background: rgba(234,88,12,0.12); color: rgb(234,88,12); font-size: 10px;">NOT CREATED</span></div>
+        <div style="padding-left: 24px;">📄 <span style="color: var(--muted-foreground);">UNSW-NB15_prepared.csv</span> <span class="status-pill" style="background: rgba(107,114,128,0.12); color: var(--muted-foreground); font-size: 10px;">GITIGNORED</span></div>
+        <div style="padding-left: 24px;">📄 <span style="color: var(--muted-foreground);">excluded_rows.jsonl</span> <span class="status-pill" style="background: rgba(107,114,128,0.12); color: var(--muted-foreground); font-size: 10px;">GITIGNORED</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 6. QUERY DEEP DIVE ═══════════════════════════════════════════════════ -->
+  <div id="queries" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">6.</span> Hive Query Deep Dive
+    </h2>
+
+    <!-- Query 1 -->
+    <div class="diagram-box" style="margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="background: rgba(239,68,68,0.15); color: rgb(239,68,68); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">🎯</span>
+        <h3 class="font-bold text-base">Query 1: Destination Address Analysis</h3>
+      </div>
+      <p style="font-size: 13px; color: var(--muted-foreground); margin-bottom: 12px;">
+        <strong>File:</strong> <code>destination_address_analysis.sql</code>
+      </p>
+      <p style="font-size: 13px; line-height: 1.7; margin-bottom: 12px;">
+        Identifies the <strong>Top 15 destination IP addresses</strong> most targeted by attacks.
+        For each destination, it calculates:
+      </p>
+      <ul style="font-size: 13px; line-height: 1.8; padding-left: 20px; margin-bottom: 16px;">
+        <li>Total records, attack records, normal records</li>
+        <li>Attack percentage within that destination</li>
+        <li>Number of distinct attack categories</li>
+        <li>Dominant attack category (most frequent) and its share</li>
+      </ul>
+
+      <h4 class="font-semibold text-sm" style="margin-bottom: 8px;">Query Logic Flow</h4>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-bottom: 12px;">
+        <div class="flow-node" style="background: rgba(59,130,246,0.1); color: rgb(59,130,246); border: 1px solid rgba(59,130,246,0.2); font-size: 11px; min-width: 90px;">CTE:<br>destination_summary<br><span style="font-size:10px;">GROUP BY dstip</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(234,88,12,0.1); color: rgb(234,88,12); border: 1px solid rgba(234,88,12,0.2); font-size: 11px; min-width: 90px;">CTE:<br>category_counts<br><span style="font-size:10px;">WHERE label=1</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(147,51,234,0.1); color: rgb(147,51,234); border: 1px solid rgba(147,51,234,0.2); font-size: 11px; min-width: 90px;">CTE:<br>ranked_categories<br><span style="font-size:10px;">ROW_NUMBER()</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(22,163,74,0.1); color: rgb(22,163,74); border: 1px solid rgba(22,163,74,0.2); font-size: 11px; min-width: 90px;">JOIN + Filter<br>rank = 1<br><span style="font-size:10px;">LIMIT 15</span></div>
+      </div>
+      <p style="font-size: 12px; color: var(--muted-foreground);">
+        <strong>Technique:</strong> Uses 3 CTEs (Common Table Expressions) and a window function <code>ROW_NUMBER()</code> to find the dominant attack category per destination IP.
+      </p>
+    </div>
+
+    <!-- Query 2 -->
+    <div class="diagram-box" style="margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="background: rgba(202,138,4,0.15); color: rgb(202,138,4); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">📊</span>
+        <h3 class="font-bold text-base">Query 2: Flow Characteristics</h3>
+      </div>
+      <p style="font-size: 13px; color: var(--muted-foreground); margin-bottom: 12px;">
+        <strong>File:</strong> <code>flow_characteristics.sql</code>
+      </p>
+      <p style="font-size: 13px; line-height: 1.7; margin-bottom: 12px;">
+        Profiles each <strong>attack category by flow duration and total bytes transferred</strong>. Reports:
+      </p>
+      <ul style="font-size: 13px; line-height: 1.8; padding-left: 20px; margin-bottom: 16px;">
+        <li>Mean, approximate median (p50), and 95th percentile (p95) for duration</li>
+        <li>Mean, approximate median and p95 for total bytes (sbytes + dbytes)</li>
+        <li>Count and percentage of zero-duration flows (instantaneous connections)</li>
+      </ul>
+
+      <h4 class="font-semibold text-sm" style="margin-bottom: 8px;">Query Logic Flow</h4>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
+        <div class="flow-node" style="background: rgba(59,130,246,0.1); color: rgb(59,130,246); border: 1px solid rgba(59,130,246,0.2); font-size: 11px; min-width: 110px;">CTE: flow_measures<br><span style="font-size:10px;">sbytes + dbytes</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(234,88,12,0.1); color: rgb(234,88,12); border: 1px solid rgba(234,88,12,0.2); font-size: 11px; min-width: 110px;">CTE: category_summary<br><span style="font-size:10px;">PERCENTILE_APPROX</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(22,163,74,0.1); color: rgb(22,163,74); border: 1px solid rgba(22,163,74,0.2); font-size: 11px; min-width: 110px;">Final SELECT<br><span style="font-size:10px;">ORDER BY count</span></div>
+      </div>
+      <p style="font-size: 12px; color: var(--muted-foreground); margin-top: 12px;">
+        <strong>Technique:</strong> Uses <code>PERCENTILE_APPROX</code> with accuracy parameter 10,000 for efficient approximate quantile computation on large datasets.
+      </p>
+    </div>
+
+    <!-- Query 3 -->
+    <div class="diagram-box" style="margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="background: rgba(59,130,246,0.15); color: rgb(59,130,246); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">⏰</span>
+        <h3 class="font-bold text-base">Query 3: Hourly Activity Analysis</h3>
+      </div>
+      <p style="font-size: 13px; color: var(--muted-foreground); margin-bottom: 12px;">
+        <strong>File:</strong> <code>hourly_activity_query.sql</code>
+      </p>
+      <p style="font-size: 13px; line-height: 1.7; margin-bottom: 12px;">
+        Provides a <strong>temporal view</strong> by grouping traffic into hourly buckets per capture date:
+      </p>
+      <ul style="font-size: 13px; line-height: 1.8; padding-left: 20px; margin-bottom: 16px;">
+        <li>Converts Unix timestamp <code>stime</code> → date + hour (UTC timezone)</li>
+        <li>Within-hour attack percentage</li>
+        <li>Each hour's share of its day's total attacks (window function)</li>
+      </ul>
+
+      <h4 class="font-semibold text-sm" style="margin-bottom: 8px;">Query Logic Flow</h4>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
+        <div class="flow-node" style="background: rgba(147,51,234,0.1); color: rgb(147,51,234); border: 1px solid rgba(147,51,234,0.2); font-size: 11px; min-width: 100px;">SET timezone<br><span style="font-size:10px;">UTC</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(59,130,246,0.1); color: rgb(59,130,246); border: 1px solid rgba(59,130,246,0.2); font-size: 11px; min-width: 100px;">CTE: time_fields<br><span style="font-size:10px;">FROM_UNIXTIME</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(234,88,12,0.1); color: rgb(234,88,12); border: 1px solid rgba(234,88,12,0.2); font-size: 11px; min-width: 100px;">CTE: hourly_summary<br><span style="font-size:10px;">GROUP BY date,hr</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(22,163,74,0.1); color: rgb(22,163,74); border: 1px solid rgba(22,163,74,0.2); font-size: 11px; min-width: 100px;">Window: daily<br><span style="font-size:10px;">SUM OVER date</span></div>
+      </div>
+      <p style="font-size: 12px; color: var(--muted-foreground); margin-top: 12px;">
+        <strong>Technique:</strong> Sets <code>hive.local.time.zone=UTC</code> for consistent time handling. Uses <code>SUM() OVER (PARTITION BY date)</code> window function for daily context.
+      </p>
+    </div>
+
+    <!-- Query 4 -->
+    <div class="diagram-box" style="margin-bottom: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="background: rgba(147,51,234,0.15); color: rgb(147,51,234); width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px;">🔌</span>
+        <h3 class="font-bold text-base">Query 4: Protocol &amp; Service Analysis</h3>
+      </div>
+      <p style="font-size: 13px; color: var(--muted-foreground); margin-bottom: 12px;">
+        <strong>File:</strong> <code>protocol_and_service_query.sql</code>
+      </p>
+      <p style="font-size: 13px; line-height: 1.7; margin-bottom: 12px;">
+        Identifies the <strong>Top 15 protocol/service combinations</strong> most associated with attacks:
+      </p>
+      <ul style="font-size: 13px; line-height: 1.8; padding-left: 20px; margin-bottom: 16px;">
+        <li>Groups by protocol (TCP, UDP, etc.) + service (HTTP, DNS, etc.)</li>
+        <li>Filters groups with at least 100 records (statistical significance)</li>
+        <li>Attack percentage within each group + global share of all attacks</li>
+      </ul>
+
+      <h4 class="font-semibold text-sm" style="margin-bottom: 8px;">Query Logic Flow</h4>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 4px;">
+        <div class="flow-node" style="background: rgba(59,130,246,0.1); color: rgb(59,130,246); border: 1px solid rgba(59,130,246,0.2); font-size: 11px; min-width: 110px;">CTE: service_summary<br><span style="font-size:10px;">GROUP BY proto,svc</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(234,88,12,0.1); color: rgb(234,88,12); border: 1px solid rgba(234,88,12,0.2); font-size: 11px; min-width: 110px;">Window: total atk<br><span style="font-size:10px;">SUM OVER ()</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="background: rgba(22,163,74,0.1); color: rgb(22,163,74); border: 1px solid rgba(22,163,74,0.2); font-size: 11px; min-width: 110px;">Filter ≥ 100<br><span style="font-size:10px;">LIMIT 15</span></div>
+      </div>
+      <p style="font-size: 12px; color: var(--muted-foreground); margin-top: 12px;">
+        <strong>Technique:</strong> Uses <code>SUM() OVER ()</code> (unbounded window) to compute global attack total, enabling per-group share calculation without a self-join.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 7. SCHEMA ═══════════════════════════════════════════════════ -->
+  <div id="schema" class="page-break" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">7.</span> Data Schema &amp; Table Design
+    </h2>
+    <div class="diagram-box">
+      <p style="font-size: 13px; color: var(--muted-foreground); margin-bottom: 16px;">
+        All queries read from a single Hive table: <code>network_flows_analysis</code>.
+        The table definition file is empty — below is the <strong>inferred schema</strong> based on query usage.
+      </p>
+
+      <div style="border: 2px solid rgba(59,130,246,0.3); border-radius: 10px; overflow: hidden;">
+        <div style="background: rgba(59,130,246,0.1); padding: 12px 16px; font-weight: 700; font-size: 14px;">
+          🗄️ network_flows_analysis
+        </div>
+        <table class="analysis-table" style="margin: 0;">
+          <thead><tr>
+            <th>Column</th><th>Inferred Hive Type</th><th>Used In</th><th>Role</th>
+          </tr></thead>
+          <tbody>
+            <tr><td><code>dstip</code></td><td>STRING</td><td>Query 1</td><td>Destination IP — grouping/join key</td></tr>
+            <tr><td><code>label</code></td><td>INT</td><td>All 4 queries</td><td>Binary label: 0=normal, 1=attack</td></tr>
+            <tr><td><code>attack_cat</code></td><td>STRING</td><td>Query 1, 2</td><td>Attack category name</td></tr>
+            <tr><td><code>dur</code></td><td>DOUBLE</td><td>Query 2</td><td>Flow duration in seconds</td></tr>
+            <tr><td><code>sbytes</code></td><td>BIGINT</td><td>Query 2</td><td>Source → destination bytes</td></tr>
+            <tr><td><code>dbytes</code></td><td>BIGINT</td><td>Query 2</td><td>Destination → source bytes</td></tr>
+            <tr><td><code>stime</code></td><td>BIGINT</td><td>Query 3</td><td>Flow start time (Unix epoch seconds)</td></tr>
+            <tr><td><code>proto</code></td><td>STRING</td><td>Query 4</td><td>Network protocol</td></tr>
+            <tr><td><code>service</code></td><td>STRING</td><td>Query 4</td><td>Application-layer service</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="font-size: 13px; margin-top: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(234,88,12,0.3); background: rgba(234,88,12,0.06);">
+        ⚠️ <strong>Note:</strong> The full UNSW-NB15 dataset has 49 columns, but this project only uses the 9 listed above. 
+        The remaining columns (srcip, sport, dport, state, spkts, dpkts, sttl, dttl, sloss, dloss, etc.) are not referenced by any query.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 8. ENVIRONMENT ═══════════════════════════════════════════════════ -->
+  <div id="environment" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">8.</span> Computing Environment
+    </h2>
+    <div class="diagram-box">
+      <p style="font-size: 13px; color: var(--muted-foreground); margin-bottom: 16px;">
+        The project was developed and tested on a <strong>Linux VM</strong> with the following stack.
+        These are the author's observed specs, not minimum requirements.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">Hadoop / HDFS</div>
+          <div style="font-size: 16px; font-weight: 700;">Hadoop 3.2.0</div>
+        </div>
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">Hive</div>
+          <div style="font-size: 16px; font-weight: 700;">Hive 3.1.3</div>
+        </div>
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">Execution Engine</div>
+          <div style="font-size: 16px; font-weight: 700;">MapReduce on YARN</div>
+        </div>
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">Spark (planned)</div>
+          <div style="font-size: 16px; font-weight: 700;">Spark 3.5.9</div>
+        </div>
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">Java</div>
+          <div style="font-size: 16px; font-weight: 700;">OpenJDK 1.8.0</div>
+        </div>
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">Scala</div>
+          <div style="font-size: 16px; font-weight: 700;">Scala 2.12.18</div>
+        </div>
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">VM Memory</div>
+          <div style="font-size: 16px; font-weight: 700;">31 GiB + 8 GiB swap</div>
+        </div>
+        <div style="padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+          <div style="font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px;">HDFS Capacity</div>
+          <div style="font-size: 16px; font-weight: 700;">~51.25 GB</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 9. HOW TO RUN ═══════════════════════════════════════════════════ -->
+  <div id="howtorun" class="page-break" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">9.</span> How to Run the Project
+    </h2>
+
+    <div class="diagram-box" style="margin-bottom: 16px;">
+      <h3 class="font-semibold text-base" style="margin-bottom: 12px;">Prerequisites</h3>
+      <p style="font-size: 13px; line-height: 1.7; margin-bottom: 12px;">
+        This project <strong>requires a Linux environment</strong> with a fully configured Hadoop ecosystem.
+        It <strong>cannot run directly on Windows</strong> without WSL or a VM.
+      </p>
+      <ol style="font-size: 13px; line-height: 2.0; padding-left: 20px;">
+        <li>✅ <strong>Linux VM or WSL</strong> (Ubuntu recommended)</li>
+        <li>✅ <strong>Java 8</strong> (OpenJDK 1.8.x) installed and <code>JAVA_HOME</code> set</li>
+        <li>✅ <strong>Hadoop 3.x</strong> installed and configured (HDFS + YARN)</li>
+        <li>✅ <strong>Apache Hive 3.x</strong> installed with metastore configured</li>
+        <li>✅ <strong>HDFS running</strong> with NameNode and DataNode active</li>
+        <li>✅ <strong>YARN running</strong> with ResourceManager and NodeManager active</li>
+      </ol>
+    </div>
+
+    <div class="diagram-box" style="margin-bottom: 16px;">
+      <h3 class="font-semibold text-base" style="margin-bottom: 12px;">Step-by-Step Execution</h3>
+
+      <!-- Step 1 -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Step 1: Start Hadoop Services</h4>
+        <div class="sql-block">
+<span style="color: var(--muted-foreground);"># Start HDFS</span>
+start-dfs.sh
+
+<span style="color: var(--muted-foreground);"># Start YARN</span>
+start-yarn.sh
+
+<span style="color: var(--muted-foreground);"># Verify services are running</span>
+jps
+<span style="color: var(--muted-foreground);"># Expected: NameNode, DataNode, ResourceManager, NodeManager, SecondaryNameNode</span></div>
+      </div>
+
+      <!-- Step 2 -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Step 2: Download the Dataset</h4>
+        <div class="sql-block">
+<span style="color: var(--muted-foreground);"># Download the main dataset</span>
+wget -O UNSW-NB15.csv "https://www.dropbox.com/s/4xqg32ih9xoh5jq/UNSW-NB15.csv?dl=1"
+
+<span style="color: var(--muted-foreground);"># Download feature definitions</span>
+wget -O UNSW-NB15_features.csv "https://www.dropbox.com/s/c8qrzd99z5s9ub6/UNSW-NB15_features.csv?dl=1"</div>
+      </div>
+
+      <!-- Step 3 -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Step 3: Prepare the Dataset (⚠️ Script Missing)</h4>
+        <div style="padding: 12px; border-radius: 8px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); font-size: 13px; margin-bottom: 8px;">
+          ⛔ <strong>BLOCKER:</strong> The preparation script that transforms <code>UNSW-NB15.csv</code> into
+          <code>UNSW-NB15_prepared.csv</code> is not included in the repository. You must write your own
+          or contact the project author. The prepared CSV must have proper headers matching the schema columns.
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Step 4: Upload to HDFS</h4>
+        <div class="sql-block">
+<span style="color: var(--muted-foreground);"># Create HDFS directory</span>
+hdfs dfs -mkdir -p /user/hive/warehouse/YOUR_DATABASE.db/network_flows_analysis
+
+<span style="color: var(--muted-foreground);"># Upload the prepared CSV</span>
+hdfs dfs -put UNSW-NB15_prepared.csv /user/hive/warehouse/YOUR_DATABASE.db/network_flows_analysis/</div>
+      </div>
+
+      <!-- Step 5 -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Step 5: Create the Hive Table (⚠️ DDL Missing)</h4>
+        <div style="padding: 12px; border-radius: 8px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); font-size: 13px; margin-bottom: 8px;">
+          ⛔ <strong>BLOCKER:</strong> <code>hive_table_definitions.sql</code> is empty. You need to create the table yourself.
+          Here's a suggested DDL based on the inferred schema:
+        </div>
+        <div class="sql-block">
+CREATE DATABASE IF NOT EXISTS YOUR_DATABASE;
+USE YOUR_DATABASE;
+
+CREATE EXTERNAL TABLE IF NOT EXISTS network_flows_analysis (
+    dstip     STRING,
+    label     INT,
+    attack_cat STRING,
+    dur       DOUBLE,
+    sbytes    BIGINT,
+    dbytes    BIGINT,
+    stime     BIGINT,
+    proto     STRING,
+    service   STRING
+    -- ... add other columns from the full 49-column schema as needed
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/user/hive/warehouse/YOUR_DATABASE.db/network_flows_analysis'
+TBLPROPERTIES ('skip.header.line.count'='1');</div>
+      </div>
+
+      <!-- Step 6 -->
+      <div style="margin-bottom: 20px;">
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Step 6: Run the Analysis Queries</h4>
+        <div class="sql-block">
+<span style="color: var(--muted-foreground);"># Run each query independently</span>
+hive --database YOUR_DATABASE -f apache_hive_approach/destination_address_analysis.sql
+hive --database YOUR_DATABASE -f apache_hive_approach/flow_characteristics.sql
+hive --database YOUR_DATABASE -f apache_hive_approach/hourly_activity_query.sql
+hive --database YOUR_DATABASE -f apache_hive_approach/protocol_and_service_query.sql</div>
+        <p style="font-size: 12px; color: var(--muted-foreground); margin-top: 8px;">
+          Each command launches MapReduce jobs via YARN. Expect each query to take several minutes depending on dataset size and cluster resources.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 10. READINESS ═══════════════════════════════════════════════════ -->
+  <div id="readiness" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(59,130,246);">10.</span> Readiness Assessment — Is Everything There?
+    </h2>
+
+    <div class="diagram-box">
+      <div style="display: grid; grid-template-columns: 1fr; gap: 0;">
+        <table class="analysis-table">
+          <thead><tr>
+            <th style="width: 40%;">Component</th>
+            <th style="width: 15%;">Status</th>
+            <th>Details</th>
+          </tr></thead>
+          <tbody>
+            <tr>
+              <td>README / Documentation</td>
+              <td><span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74);">✅ Present</span></td>
+              <td style="font-size: 12px;">Well-written with dataset links, environment specs, and instructions</td>
+            </tr>
+            <tr>
+              <td>.gitignore</td>
+              <td><span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74);">✅ Present</span></td>
+              <td style="font-size: 12px;">Properly excludes datasets, logs, Python venvs, OS files</td>
+            </tr>
+            <tr>
+              <td>Destination Address Query</td>
+              <td><span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74);">✅ Present</span></td>
+              <td style="font-size: 12px;">38 lines, complete, uses CTEs + window functions</td>
+            </tr>
+            <tr>
+              <td>Flow Characteristics Query</td>
+              <td><span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74);">✅ Present</span></td>
+              <td style="font-size: 12px;">34 lines, complete, uses PERCENTILE_APPROX</td>
+            </tr>
+            <tr>
+              <td>Hourly Activity Query</td>
+              <td><span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74);">✅ Present</span></td>
+              <td style="font-size: 12px;">33 lines, complete, sets UTC timezone</td>
+            </tr>
+            <tr>
+              <td>Protocol &amp; Service Query</td>
+              <td><span class="status-pill" style="background: rgba(22,163,74,0.12); color: rgb(22,163,74);">✅ Present</span></td>
+              <td style="font-size: 12px;">25 lines, complete, filters ≥ 100 records</td>
+            </tr>
+            <tr style="background: rgba(239,68,68,0.04);">
+              <td><strong>Hive Table DDL</strong></td>
+              <td><span class="status-pill" style="background: rgba(239,68,68,0.12); color: rgb(239,68,68);">❌ Empty</span></td>
+              <td style="font-size: 12px;"><strong>BLOCKER</strong> — File exists but is 0 bytes. Must write CREATE TABLE yourself</td>
+            </tr>
+            <tr style="background: rgba(239,68,68,0.04);">
+              <td><strong>Dataset (CSV)</strong></td>
+              <td><span class="status-pill" style="background: rgba(239,68,68,0.12); color: rgb(239,68,68);">❌ Missing</span></td>
+              <td style="font-size: 12px;"><strong>BLOCKER</strong> — Gitignored, must download + prepare manually</td>
+            </tr>
+            <tr style="background: rgba(239,68,68,0.04);">
+              <td><strong>Data Preparation Script</strong></td>
+              <td><span class="status-pill" style="background: rgba(239,68,68,0.12); color: rgb(239,68,68);">❌ Missing</span></td>
+              <td style="font-size: 12px;"><strong>BLOCKER</strong> — No script to transform raw CSV → prepared CSV</td>
+            </tr>
+            <tr style="background: rgba(234,88,12,0.04);">
+              <td>Apache Spark Approach</td>
+              <td><span class="status-pill" style="background: rgba(234,88,12,0.12); color: rgb(234,88,12);">⏳ Pending</span></td>
+              <td style="font-size: 12px;">Documented as planned but directory not even created</td>
+            </tr>
+            <tr style="background: rgba(234,88,12,0.04);">
+              <td>Execution Results / Output</td>
+              <td><span class="status-pill" style="background: rgba(234,88,12,0.12); color: rgb(234,88,12);">⏳ Not Included</span></td>
+              <td style="font-size: 12px;">No sample outputs or result exports</td>
+            </tr>
+            <tr style="background: rgba(234,88,12,0.04);">
+              <td>Hadoop / Hive Setup Scripts</td>
+              <td><span class="status-pill" style="background: rgba(234,88,12,0.12); color: rgb(234,88,12);">⏳ Not Included</span></td>
+              <td style="font-size: 12px;">Requires manual installation of entire Hadoop ecosystem</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════ 11. GAPS ═══════════════════════════════════════════════════ -->
+  <div id="gaps" style="margin-bottom: 40px;">
+    <h2 class="text-xl font-bold" style="margin-bottom: 12px;">
+      <span style="color: rgb(239,68,68);">11.</span> Missing Components &amp; Gaps
+    </h2>
+
+    <div class="diagram-box">
+      <h3 class="font-semibold text-base" style="margin-bottom: 16px; color: rgb(239,68,68);">🚫 Cannot Run As-Is — 3 Critical Blockers</h3>
+
+      <div style="display: grid; gap: 16px;">
+        <!-- Blocker 1 -->
+        <div style="padding: 16px; border-radius: 10px; border: 2px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.04);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 20px;">1️⃣</span>
+            <h4 class="font-bold text-sm">Missing: Data Preparation Script</h4>
+          </div>
+          <p style="font-size: 13px; color: var(--muted-foreground);">
+            The raw <code>UNSW-NB15.csv</code> must be transformed into <code>UNSW-NB15_prepared.csv</code>.
+            The README mentions this but the script is not included. Without knowing how columns were reordered,
+            filtered, or transformed, you cannot reproduce the exact table the queries expect.
+          </p>
+        </div>
+
+        <!-- Blocker 2 -->
+        <div style="padding: 16px; border-radius: 10px; border: 2px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.04);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 20px;">2️⃣</span>
+            <h4 class="font-bold text-sm">Missing: Hive Table Definition (CREATE TABLE)</h4>
+          </div>
+          <p style="font-size: 13px; color: var(--muted-foreground);">
+            <code>hive_table_definitions.sql</code> is a 0-byte empty file. Without the DDL, you don't know
+            the exact column order, types, or delimiters. The schema can be inferred from query usage (shown in Section 7)
+            but may be incomplete.
+          </p>
+        </div>
+
+        <!-- Blocker 3 -->
+        <div style="padding: 16px; border-radius: 10px; border: 2px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.04);">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 20px;">3️⃣</span>
+            <h4 class="font-bold text-sm">Missing: Dataset CSV File</h4>
+          </div>
+          <p style="font-size: 13px; color: var(--muted-foreground);">
+            The CSV data files are (correctly) gitignored. You must download from the provided Dropbox links
+            and then prepare them. This is expected, but combined with the missing prep script, creates a gap.
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 16px; border-radius: 10px; border: 1px solid rgba(59,130,246,0.3); background: rgba(59,130,246,0.04);">
+        <h4 class="font-bold text-sm" style="margin-bottom: 8px;">💡 Summary Verdict</h4>
+        <p style="font-size: 13px; line-height: 1.7;">
+          The <strong>analysis queries are complete and well-written</strong>, using proper CTEs, window functions,
+          and approximate percentile computations. However, the project is <strong>not self-contained</strong> — it
+          is missing the table DDL and data preparation pipeline needed to actually run it. You would need to:
+          <br>① Set up Hadoop + Hive on a Linux VM (or use a pre-configured environment like Cloudera/HDP sandbox),
+          <br>② Download the dataset and write your own preparation script,
+          <br>③ Write the <code>CREATE TABLE</code> statement,
+          <br>④ Then the 4 analysis queries will work.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align: center; padding: 24px 0; border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 12px;">
+    Generated by Antigravity · UNSW-NB15 Network Traffic Analysis · Project Documentation
+  </div>
+
+</body>
+</html>
