@@ -147,6 +147,14 @@ hive --database bigguard_db -f apache_hive_approach/hourly_activity_query.sql
 hive --database bigguard_db -f apache_hive_approach/protocol_and_service_query.sql
 ```
 
+### 5. Unified Interactive Demonstration Dashboard
+To launch the end-to-end BDA demonstration with cluster health monitoring, 5GB HDFS block viewer, YARN resource allocation, and interactive analytics:
+```cmd
+# Double click or run from terminal:
+START_FULL_DEMO_DASHBOARD.bat
+```
+This automatically starts Hadoop services, opens the HDFS and YARN web consoles, and loads the BigGuard Control Center at `http://localhost:8501`.
+
 ---
 
 ## 🔮 Roadmap
