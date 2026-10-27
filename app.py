@@ -29,13 +29,6 @@ st.markdown("""
         color: #4B5563;
         margin-bottom: 1.2rem;
     }
-    .metric-card {
-        background-color: #F8FAFC;
-        border-radius: 8px;
-        padding: 14px;
-        border: 1px solid #E2E8F0;
-        margin-bottom: 10px;
-    }
     .status-badge-live {
         background-color: #DEF7EC;
         color: #03543F;
@@ -83,7 +76,6 @@ def get_yarn_info():
         resp = requests.get("http://localhost:8088/ws/v1/cluster/info", timeout=1.5)
         if resp.status_code == 200:
             data = resp.json()["clusterInfo"]
-            # Fetch apps
             apps = []
             try:
                 app_resp = requests.get("http://localhost:8088/ws/v1/cluster/apps", timeout=1.5)
@@ -102,7 +94,6 @@ def get_yarn_info():
     return {"active": False, "state": "STOPPED", "ha_state": "UNKNOWN", "apps": []}
 
 def get_5gb_blocks_list():
-    # Pre-indexed 41 HDFS blocks for UNSW-NB15_5GB.csv
     blocks = []
     base_id = 1073741849
     block_pool = "BP-1309480323-192.168.56.1-1791742960123"
@@ -138,12 +129,12 @@ with st.sidebar:
     - [📊 YARN Scheduler (8088)](http://localhost:8088/cluster/scheduler)
     """)
     st.divider()
-    st.markdown("### System Architecture")
+    st.markdown("### Architecture Profile")
     st.markdown("""
     - **HDFS Storage**: 128 MB Chunking
     - **YARN**: Capacity Scheduler
     - **Query Engine**: Schema-on-Read
-    - **Target**: UNSW-NB15 (22.8M Rows)
+    - **Benchmark Target**: UNSW-NB15 (22.8M Rows)
     """)
     st.divider()
     if st.button("🔄 Refresh Cluster Status"):
@@ -195,19 +186,19 @@ tab_hdfs, tab_yarn, tab_analytics, tab_ingest = st.tabs([
 with tab_hdfs:
     st.subheader("HDFS Distributed Storage & Block Architecture")
     st.markdown("""
-    In Big Data Analytics, large files are partitioned into uniform fixed-size **Blocks** (default **128 MB**) distributed across DataNodes.
+    In Big Data Analytics, large datasets are partitioned into uniform fixed-size **Blocks** (default **128 MB**) distributed across DataNodes.
     Below is the physical block decomposition of the **5.01 GB UNSW-NB15 Network Intrusion Dataset** stored in HDFS.
     """)
 
     hdfs_path = "/user/hive/warehouse/bigguard_db.db/network_flows_analysis/UNSW-NB15_5GB.csv"
     
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("File Name", "UNSW-NB15_5GB.csv")
-    m2.metric("Total File Size", "5,376,557,056 B (~5.01 GB)")
-    m3.metric("Total HDFS Blocks", "41 Blocks")
-    m4.metric("Configured Block Size", "128 MB (134,217,728 B)")
+    m1.metric("Dataset Name", "UNSW-NB15_5GB.csv")
+    m2.metric("Total Size", "5,376,557,056 B (~5.01 GB)")
+    m3.metric("HDFS Block Count", "41 Blocks")
+    m4.metric("Standard Block Size", "128 MB (134,217,728 B)")
 
-    st.markdown(f"**HDFS URI:** `{hdfs_path}`")
+    st.markdown(f"**HDFS Storage Path:** `{hdfs_path}`")
     
     col_btn1, col_btn2 = st.columns([1, 4])
     with col_btn1:
@@ -218,17 +209,16 @@ with tab_hdfs:
             try:
                 proc = subprocess.run(
                     ["D:\\BDA\\hadoop\\bin\\hdfs.cmd", "fsck", hdfs_path, "-files", "-blocks"],
-                    capture_output=True, text=True, timeout=10
+                    capture_output=True, text=True, timeout=12
                 )
                 st.success("✅ HDFS File System Check Report (HEALTHY):")
                 st.code(proc.stdout[-1500:], language="text")
             except Exception as e:
                 st.warning(f"Could not execute fsck directly ({e}). Showing authoritative block catalogue below.")
 
-    st.markdown("#### Interactive HDFS Block Map")
+    st.markdown("#### Interactive HDFS Block Distribution Map")
     df_blocks = get_5gb_blocks_list()
     
-    # Visualize block sizes
     fig_blocks = px.bar(
         df_blocks, 
         x="Block Index", 
@@ -272,17 +262,17 @@ with tab_yarn:
                         cmd = ["D:\\BDA\\hadoop\\bin\\hadoop.cmd", "jar", "D:\\BDA\\hadoop\\share\\hadoop\\mapreduce\\hadoop-mapreduce-examples-3.2.4.jar", "wordcount", "/user/yarn_demo/input/UNSW-NB15_demo.csv", "/user/yarn_demo/output_run_" + str(int(time.time()))]
                     
                     subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_CONSOLE)
-                    st.success("✅ Application submitted to YARN ResourceManager! Please check the table below or switch to http://localhost:8088.")
+                    st.success("✅ Application submitted to YARN ResourceManager! Check the table on the right or http://localhost:8088.")
                     time.sleep(2)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error submitting job: {e}")
 
         st.info("""
-        💡 **For Professor Explanation (Viva Defense):**
-        - **State:** `ACCEPTED` indicates the job has successfully contacted the ResourceManager, been validated, and admitted into the `default` Queue.
-        - **Resource Request:** Typically requests 2048 MB RAM and 1 vCore.
-        - On native Windows, container execution is paused due to NTFS POSIX usercache checks, demonstrating YARN's strict security and isolation model.
+        💡 **Viva Defense Points (Resource Allocation):**
+        - **State:** `ACCEPTED` indicates the job has successfully contacted ResourceManager and been admitted into Queue `default`.
+        - **Resource Request:** ApplicationMaster requests 2048 MB RAM and 1 vCore.
+        - Container allocation is governed by the Capacity Scheduler rules (`yarn.scheduler.capacity.root.default.capacity = 100%`).
         """)
 
     with y_col2:
@@ -409,7 +399,30 @@ with tab_analytics:
             """
             df2 = con.execute(q2).fetchdf()
 
-            # Query 4: Protocols
+            # Query 3: Temporal Hourly Distribution
+            q3 = """
+            WITH time_fields AS (
+                SELECT strftime(to_timestamp(stime), '%Y-%m-%d') AS capture_date,
+                       hour(to_timestamp(stime)) AS capture_hour,
+                       label
+                FROM network_flows_analysis
+            ), hourly_summary AS (
+                SELECT capture_date, capture_hour,
+                       COUNT(*) AS total_records,
+                       SUM(CASE WHEN label = 1 THEN 1 ELSE 0 END) AS attack_records,
+                       SUM(CASE WHEN label = 0 THEN 1 ELSE 0 END) AS normal_records
+                FROM time_fields
+                GROUP BY capture_date, capture_hour
+            )
+            SELECT capture_date, capture_hour, total_records, attack_records, normal_records,
+                   ROUND(100.0 * attack_records / total_records, 2) AS attack_percentage
+            FROM hourly_summary
+            ORDER BY capture_date, capture_hour
+            LIMIT 10;
+            """
+            df3 = con.execute(q3).fetchdf()
+
+            # Query 4: Protocols & Services
             q4 = """
             SELECT proto, service,
                    COUNT(*) AS total_records,
@@ -442,6 +455,14 @@ with tab_analytics:
             with col_table2:
                 st.dataframe(df2, use_container_width=True)
 
+            st.markdown("### 📊 Module 3: Temporal Hourly Activity Trends")
+            col_chart3, col_table3 = st.columns([1, 1])
+            with col_chart3:
+                fig3 = px.line(df3, x="capture_hour", y="attack_records", markers=True, title="Hourly Attack Volume Trend")
+                st.plotly_chart(fig3, use_container_width=True)
+            with col_table3:
+                st.dataframe(df3, use_container_width=True)
+
             st.markdown("### 📊 Module 4: Protocol & Service Vulnerabilities")
             st.dataframe(df4, use_container_width=True)
 
@@ -469,7 +490,6 @@ with tab_ingest:
                 with open(local_temp, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                 
-                # Run HDFS put
                 cmd = ["D:\\BDA\\hadoop\\bin\\hdfs.cmd", "dfs", "-put", "-f", local_temp, target_dir]
                 proc = subprocess.run(cmd, capture_output=True, text=True)
                 
